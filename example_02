@@ -1,0 +1,29 @@
+from SPARQLWrapper import SPARQLWrapper, JSON
+
+sparql = SPARQLWrapper("http://dbpedia.org/sparql")
+sparql.setQuery("""
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    SELECT ?name ?abstract
+    WHERE { <http://dbpedia.org/resource/Jack_London> rdfs:label ?name
+    FILTER (LANG(?name)="en").
+     <http://dbpedia.org/resource/Jack_London> dbpedia-owl:abstract ?abstract
+    FILTER (LANG(?abstract)="en").
+     }
+""")
+sparql.setReturnFormat(JSON)
+results = sparql.query().convert()
+
+print('<html><head>About Jack London</title></head>')
+print('<body><title>About Jack London</title>')
+print('<ul>')
+
+
+for result in results["results"]["bindings"]:
+    print(result["name"]["value"])
+    #print(url = "http://en.wikipedia.org/wiki/" + result["name"]["value"].encode('ascii', 'ignore').split('/')[-1])
+
+for result in results["results"]["bindings"]:
+    print(result["abstract"]["value"])
+
+print('</ul>')
+print('</body></html>')
