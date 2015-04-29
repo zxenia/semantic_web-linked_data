@@ -1,0 +1,71 @@
+import urllib3
+from datetime import datetime
+from SPARQLWrapper import SPARQLWrapper, JSON, XML, N3, RDF
+
+sparql = SPARQLWrapper("http://dbpedia.org/sparql")
+
+sparql.setQuery("""
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX dbpedia-owl: <http://dbpedia.org/ontology/>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+
+SELECT ?person ?name ?indegree ?date ?descr ?pic
+WHERE
+{
+ ?person rdf:type dbpedia-owl:Writer ;
+         rdfs:label ?name FILTER (lang(?name)="en") .
+ ?person dbpedia-owl:birthDate ?date FILTER (SUBSTR(STR(?date),6)=SUBSTR(STR(bif:curdate('')),6)) .
+ ?person dbpedia-owl:wikiPageInLinkCount ?indegree ;
+         dc:description ?descr .
+ ?person dbpedia-owl:thumbnail ?pic .
+} 
+ORDER BY DESC(?indegree)
+""")
+
+sparql.setReturnFormat(JSON)
+results = sparql.query().convert()
+
+# Create HTML output
+print('<html><head><title>Literary Birthdays of Today</title></head>')
+
+# extract Weekday %A / Month %B / Day of the Month %d by formatting today's date accordingly
+datum = datetime.today().strftime("%A  %B %d")
+print('<body><h1>Literary Birthdays of {}</h1>'.format(datum))
+
+print('<ul>')
+
+for result in results["results"]["bindings"]:
+	if ("person" in result):
+		# Create Wikipedia Link
+		url = "http://en.wikipedia.org/wiki/" + result["person"]["value"].encode('ascii', 'ignore').split('/')[-1]
+	else:
+		url = 'NONE'
+	if ("name" in result):
+		name = result["name"]["value"].encode('ascii', 'ignore')
+	else:
+		name = 'NONE'
+	if ("date" in result):
+		date = result["date"]["value"].encode('ascii', 'ignore')
+	else:
+		date = 'NONE'
+	if ("descr" in result):
+		description = result["descr"]["value"].encode('ascii', 'ignore')
+	else:
+		description = ' '
+	if ("pic" in result):
+		pic = result["pic"]["value"].encode('ascii', 'ignore')
+	else:
+		pic = 'http://upload.wikimedia.org/wikipedia/commons/7/7a/Question_Mark.gif'
+
+
+	# parse date as datetime
+	dt = datetime.strptime(date, '%Y-%m-%d+02:00')
+	# print '<li><b>{}</b> --  <a href="{}">{}</a>, {} </li>'.format(dt.year, url, name, description)
+	print('<li><b>{}</b> -- <img src="{}" height="60px"> <a href="{}">{}</a>, {} </li>'.format(dt.year,
+																							   pic.replace("200px",
+																										   "60px"), url,
+																							   name, description))
+
+print('</ul>')
+print('</body></html>')
